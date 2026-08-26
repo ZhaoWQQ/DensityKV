@@ -1,0 +1,127 @@
+# Reproducible qualitative cases retained for the AAAI submission.
+#
+# The launcher merges common -> backbone -> method -> case. DensityKV uses the
+# final paper-video setting: B3, max-normalized ordering, one synchronized
+# admission count across heads, post-RoPE K geometry, M=9360, and a five-frame
+# local window.
+
+common:
+  denoising_step_list: [1000, 750, 500, 250]
+  warp_denoising_step: true
+  num_frame_per_block: 3
+  model_name: Wan2.1-T2V-1.3B
+  model_kwargs:
+    local_attn_size: 12
+    timestep_shift: 5.0
+    sink_size: 1
+  inference_iter: -1
+  skip_existing: true
+  num_samples: 1
+  save_with_index: true
+  reset_seed_per_prompt: true
+  global_sink: true
+  context_noise: 0
+
+backbones:
+  causal_forcing:
+    generator_ckpt: checkpoints/causal_forcing.pt
+    use_ema: false
+  self_forcing:
+    generator_ckpt: checkpoints/self_forcing.pt
+    use_ema: true
+  longlive:
+    generator_ckpt: checkpoints/longlive_base.pt
+    lora_ckpt: checkpoints/longlive_lora.pt
+    use_ema: false
+    adapter:
+      type: lora
+      rank: 256
+      alpha: 256
+      dropout: 0.0
+      dtype: bfloat16
+      verbose: false
+
+methods:
+  base:
+    model_kwargs: {}
+  rag:
+    model_kwargs:
+      use_latentmem: true
+      memory_size: 6
+      recent_exclude: 5
+      compression_method: ae
+      ae_ckpt: checkpoints/ae_latent_mem.pt
+  densitykv:
+    model_kwargs:
+      use_latentmem: true
+      memory_size: 0
+      recent_exclude: 0
+      density_kv:
+        enabled: true
+        capacity: 9360
+        local_window_frames: 5
+        logical_precommit: true
+        process_all_candidates: true
+        update_chunk_size: 512
+        full_update_mode: legacy_chunk_batch
+        legacy_chunk_grouping: contiguous
+        legacy_drop_tail_when_full: false
+        legacy_repeat_tail_when_full: 0
+        legacy_warmup_chunk_size: -1
+
+        # B3 admission invariant.
+        legacy_density_growth_gate: true
+        legacy_density_gated_bootstrap: false
+        legacy_density_gated_bootstrap_v2: true
+        legacy_density_gated_bootstrap_v4: false
+        legacy_bootstrap_density_limit: 2.0
+        legacy_bootstrap_v4_ratio_limit: 1.0
+        legacy_bootstrap_v4_seed: 0
+        legacy_bootstrap_v4_warmup_tokens: 0
+        legacy_bootstrap_v2_gate: all_anchor_growth_ratio
+        legacy_bootstrap_absolute_density_limit: -1.0
+        legacy_bootstrap_tail_cleanup_size: 0
+        legacy_normalized_group_count: -1
+        legacy_cleanup_divisor: -1
+        legacy_cleanup_alignment: 8
+        append_density_growth_limit: 2.0
+
+        # Key geometry and Soft-Riesz kernel.
+        density_scale: 8.0
+        riesz_power: 2.0
+        riesz_eps: 1.0
+        replacement_ratio: 1.0
+        evict_densest_when_full: true
+
+        union_work_chunk_size: 128
+        compute_dtype: bfloat16
+        fast_impl: auto
+        bootstrap_report_commits: 100
+        bootstrap_report_quantiles: false
+
+cases:
+  figure1_panda:
+    backbone: causal_forcing
+    data_path: configs/prompts/figure1_panda.txt
+    num_output_frames: 480
+    scheduler_noise_reference_frames: 243
+    seed: 13
+    idx_offset: 0
+  figure3_kangaroo:
+    backbone: causal_forcing
+    data_path: configs/prompts/figure3_kangaroo.txt
+    num_output_frames: 480
+    seed: 0
+    idx_offset: 12
+  figure5_rabbit:
+    backbone: causal_forcing
+    data_path: configs/prompts/figure5_rabbit.txt
+    num_output_frames: 243
+    seed: 0
+    idx_offset: 68
+  sunglasses_man:
+    backbone: longlive
+    data_path: configs/prompts/sunglasses_man.txt
+    num_output_frames: 480
+    seed: 0
+    idx_offset: 97

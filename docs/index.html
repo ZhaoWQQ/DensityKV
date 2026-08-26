@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="DensityKV is a training-free historical KV bank management strategy for consistent long-horizon video generation."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:title" content="DensityKV" />
+    <meta property="og:description" content="Density-Guided KV Cache Compression for Long Video Generation" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/panda-densitykv-60s.png" />
+    <title>DensityKV | Long Video Generation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="shell nav-row">
+        <a class="wordmark" href="#top" aria-label="DensityKV home">DensityKV</a>
+        <nav class="desktop-nav" aria-label="Primary navigation">
+          <a href="#abstract">Abstract</a>
+          <a href="#method">Method</a>
+          <a href="#results">Results</a>
+          <a href="#citation">Citation</a>
+        </nav>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-button>
+          <i data-lucide="menu" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <nav class="mobile-nav" aria-label="Mobile navigation" data-mobile-nav>
+      <a href="#abstract">Abstract</a>
+      <a href="#method">Method</a>
+      <a href="#results">Results</a>
+      <a href="#citation">Citation</a>
+    </nav>
+
+    <main id="main">
+      <section class="hero shell" id="top" aria-labelledby="hero-title">
+        <p class="venue">Project page</p>
+        <h1 id="hero-title">DensityKV</h1>
+        <p class="hero-subtitle">Density-Guided KV Cache Compression for Long Video Generation</p>
+
+        <p class="authors">
+          <span>Wenqu Zhao<sup>1*</sup></span>
+          <span>Xuemin Chi<sup>1</sup></span>
+          <span>Xin Zhang<sup>1</sup></span>
+          <span>Guoqing Ma<sup>1</sup></span>
+          <span>Baorun Li<sup>1</sup></span>
+          <span>Jianjie Fang<sup>1,2</sup></span>
+          <span>Peizhi Tang<sup>1,2</sup></span>
+          <span>Chen Gao<sup>1,2</sup></span>
+          <span>Wei Wu<sup>1</sup></span>
+        </p>
+        <p class="affiliations"><sup>1</sup>Manifold AI &nbsp;&nbsp; <sup>2</sup>Tsinghua University &nbsp;&nbsp; <sup>*</sup>Corresponding author</p>
+
+        <div class="hero-actions" aria-label="Project resources">
+          <a class="button button-primary" href="assets/densitykv-paper.pdf">
+            <i data-lucide="file-text" aria-hidden="true"></i>
+            Paper
+          </a>
+          <a class="button" href="https://github.com/ZhaoWQQ/DensityKV">
+            <i data-lucide="github" aria-hidden="true"></i>
+            Code
+          </a>
+          <a class="button" href="#citation">
+            <i data-lucide="quote" aria-hidden="true"></i>
+            BibTeX
+          </a>
+        </div>
+
+        <p class="tldr">
+          <strong>TL;DR:</strong> DensityKV keeps a bounded, token-level historical KV memory by
+          suppressing repeated coverage in dense post-RoPE key-space neighborhoods.
+        </p>
+
+        <figure class="teaser-video">
+          <video
+            controls
+            muted
+            autoplay
+            loop
+            playsinline
+            preload="metadata"
+            aria-label="120-second panda comparison across Causal-Forcing, LongLive-RAG, and DensityKV"
+          >
+            <source src="assets/videos/panda-causal-forcing-120s.mp4" type="video/mp4" />
+            Your browser does not support HTML video.
+          </video>
+          <figcaption>
+            A matched 120-second rollout. All three columns share the same Causal-Forcing prompt and seed.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="section abstract-section" id="abstract">
+        <div class="shell text-column">
+          <h2>Abstract</h2>
+          <p>
+            Autoregressive video diffusion models enable streaming generation through sliding-window
+            attention, but each generated block is conditioned on previously generated content, causing
+            appearance and motion errors to propagate recursively over time. Historical key-value (KV)
+            memory preserves earlier subject and scene states and helps maintain long-horizon consistency.
+            However, retaining every generated state creates a historical archive that grows continuously
+            with the rollout, while recurrent states repeatedly add redundant coverage.
+          </p>
+          <p>
+            We propose <strong>DensityKV</strong>, a training-free historical KV bank management strategy.
+            It maintains a separate token-level bank for each attention head and measures local redundancy
+            among post-RoPE keys using Soft-Riesz density. By constraining neighborhood-density growth after
+            admission, DensityKV limits repeated historical accumulation while preserving coherent states
+            from each completed generation block. Across three autoregressive video backbones and multiple
+            generation lengths, DensityKV improves long-horizon consistency under the same upper bound on
+            historical KV capacity while keeping persistent storage bounded independently of rollout length.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="method">
+        <div class="shell">
+          <div class="section-heading">
+            <p class="kicker">Method</p>
+            <h2>Density-guided historical memory</h2>
+            <p>
+              DensityKV manages exact K/V pairs at token granularity. Retention decisions are made in each
+              head's post-RoPE key space, while every retained value remains paired with its original key.
+            </p>
+          </div>
+
+          <figure class="method-figure">
+            <img
+              src="assets/method-overview.png"
+              alt="Overview of DensityKV's per-head historical KV bank update and attention cycle"
+              loading="lazy"
+            />
+            <figcaption>
+              Current queries attend retained history; clean generated K/V candidates then update each
+              head-specific bank according to local key-space saturation.
+            </figcaption>
+          </figure>
+
+          <div class="method-points">
+            <article>
+              <span>01</span>
+              <h3>Measure local density</h3>
+              <p>Soft-Riesz interactions estimate repeated coverage without an auxiliary retriever.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Constrain density growth</h3>
+              <p>Admission-relative growth limits repeatedly observed neighborhoods after they enter memory.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Attend exact K/V pairs</h3>
+              <p>The backbone directly reads the retained history through its native attention path.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section results-section" id="results">
+        <div class="shell">
+          <div class="section-heading">
+            <p class="kicker">Qualitative results</p>
+            <h2>Matched long-horizon comparisons</h2>
+            <p>
+              Each video shows the native backbone, LongLive-RAG, and DensityKV side by side for the same
+              prompt, seed, and 120-second rollout.
+            </p>
+          </div>
+
+          <div class="video-gallery">
+            <figure class="result-video">
+              <video controls muted loop playsinline preload="metadata" aria-label="LongLive character comparison">
+                <source src="assets/videos/wig-longlive-120s.mp4" type="video/mp4" />
+              </video>
+              <figcaption>
+                <strong>LongLive · MovieGenBench #097.</strong> Long-term character appearance and street-scene structure.
+              </figcaption>
+            </figure>
+
+            <figure class="result-video">
+              <video controls muted loop playsinline preload="metadata" aria-label="Causal-Forcing kangaroo comparison">
+                <source src="assets/videos/kangaroo-causal-forcing-120s.mp4" type="video/mp4" />
+              </video>
+              <figcaption>
+                <strong>Causal-Forcing · MovieGenBench #012.</strong> Subject identity under sustained, highly dynamic motion.
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="result-facts" aria-label="Evaluation summary">
+            <div><strong>3</strong><span>autoregressive backbones</span></div>
+            <div><strong>30–120 s</strong><span>generation horizons</span></div>
+            <div><strong>9,360</strong><span>historical tokens per head</span></div>
+            <div><strong>Training-free</strong><span>frozen generator weights</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section code-section" id="code">
+        <div class="shell code-grid">
+          <div>
+            <p class="kicker">Code</p>
+            <h2>Reproduce the paper cases</h2>
+            <p>
+              The release includes the DensityKV bank implementation, model integration, formal case
+              configurations, and lightweight contract tests. A dry run resolves model, prompt, seed, and
+              output paths without loading a checkpoint.
+            </p>
+          </div>
+          <div class="terminal" aria-label="Quick start command">
+            <div class="terminal-bar">
+              <span>Quick start</span>
+              <button type="button" title="Copy command" aria-label="Copy command" data-copy-command>
+                <i data-lucide="copy" aria-hidden="true"></i>
+              </button>
+            </div>
+            <pre><code data-command>python scripts/run_paper_case.py \
+  --case figure1_panda \
+  --dry-run</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section citation-section" id="citation">
+        <div class="shell citation-grid">
+          <div>
+            <p class="kicker">Citation</p>
+            <h2>BibTeX</h2>
+            <p>Please cite DensityKV if this project is useful in your research.</p>
+          </div>
+          <div class="bibtex">
+            <button type="button" title="Copy BibTeX" aria-label="Copy BibTeX" data-copy-bibtex>
+              <i data-lucide="copy" aria-hidden="true"></i>
+            </button>
+            <pre><code data-bibtex>@article{zhao2026densitykv,
+  title   = {DensityKV: Density-Guided KV Cache Compression for Long Video Generation},
+  author  = {Zhao, Wenqu and Chi, Xuemin and Zhang, Xin and Ma, Guoqing and Li, Baorun and Fang, Jianjie and Tang, Peizhi and Gao, Chen and Wu, Wei},
+  year    = {2026}
+}</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-row">
+        <span>DensityKV</span>
+        <span>Manifold AI · Tsinghua University</span>
+      </div>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="site.js"></script>
+  </body>
+</html>

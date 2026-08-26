@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use DensityKV, please cite the paper below."
+title: "DensityKV: Density-Guided KV Cache Compression for Long Video Generation"
+type: software
+authors:
+  - family-names: Zhao
+    given-names: Wenqu
+  - family-names: Chi
+    given-names: Xuemin
+  - family-names: Zhang
+    given-names: Xin
+  - family-names: Ma
+    given-names: Guoqing
+  - family-names: Li
+    given-names: Baorun
+  - family-names: Fang
+    given-names: Jianjie
+  - family-names: Tang
+    given-names: Peizhi
+  - family-names: Gao
+    given-names: Chen
+  - family-names: Wu
+    given-names: Wei
+repository-code: "https://github.com/ZhaoWQQ/DensityKV"
+url: "https://zhaowqq.github.io/DensityKV/"
+license: Apache-2.0

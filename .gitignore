@@ -1,0 +1,53 @@
+# Python and editor state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+.idea/
+.vscode/
+
+# Local coding-agent project memory (not part of the anonymous artifact)
+AGENTS.md
+
+# Environments and package caches
+.env
+.venv/
+env/
+venv/
+.cache/
+build/
+dist/
+*.egg-info/
+
+# Downloaded models and checkpoints
+wan_models/
+checkpoints/
+weights/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+
+# Generated outputs
+outputs/
+logs/
+videos/
+runs/
+wandb/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.npy
+*.npz
+*.zip
+*.tar
+*.tar.gz
+
+# Public project-page comparisons (the only generated videos kept in Git)
+!docs/assets/videos/
+!docs/assets/videos/*.mp4
