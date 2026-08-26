@@ -12,6 +12,48 @@ token-specific key/value states, then keeps a bounded coreset in each attention
 key space. Keys determine admission and eviction; values remain exact paired
 payloads.
 
+## Paper Highlights
+
+### Figure 1: Long-Horizon Attention and Generation
+
+[![Causal-Forcing, LongLive-RAG, and DensityKV on the 120-second panda-playing-guitar case](docs/assets/video-posters/panda-causal-forcing-120s.png)](docs/assets/videos/panda-causal-forcing-120s.mp4)
+
+**Causal-Forcing · panda playing guitar · 120 seconds.** The three columns use
+the same prompt and seed. [Watch the full comparison video](docs/assets/videos/panda-causal-forcing-120s.mp4).
+
+### Figure 2: Method Overview
+
+![DensityKV method overview](docs/assets/method-overview.png)
+
+DensityKV retains fully denoised historical K/V states in independent
+head-specific banks. Each bank uses post-RoPE key-space density to control
+admission and eviction, while values remain paired with their original keys.
+
+### Figure 3: Qualitative Comparisons
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="docs/assets/videos/wig-longlive-120s.mp4">
+        <img src="docs/assets/video-posters/wig-longlive-120s.png" alt="LongLive, LongLive-RAG, and DensityKV on MovieGenBench 097" />
+      </a>
+    </td>
+    <td width="50%">
+      <a href="docs/assets/videos/kangaroo-causal-forcing-120s.mp4">
+        <img src="docs/assets/video-posters/kangaroo-causal-forcing-120s.png" alt="Causal-Forcing, LongLive-RAG, and DensityKV on MovieGenBench 012" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td><strong>LongLive · MovieGenBench #097 · 120 seconds</strong></td>
+    <td><strong>Causal-Forcing · MovieGenBench #012 · 120 seconds</strong></td>
+  </tr>
+  <tr>
+    <td><a href="docs/assets/videos/wig-longlive-120s.mp4">Watch the full comparison video</a></td>
+    <td><a href="docs/assets/videos/kangaroo-causal-forcing-120s.mp4">Watch the full comparison video</a></td>
+  </tr>
+</table>
+
 ## Submission Configuration
 
 All retained paper examples use the same final DensityKV policy:
