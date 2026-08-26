@@ -48,7 +48,7 @@ Click any preview to open the corresponding 120-second video in the browser.
 
 ### Figure 2: Method Overview
 
-![DensityKV method overview](docs/assets/method-overview.png)
+![DensityKV method overview](docs/assets/method-overview-cropped.png)
 
 DensityKV retains fully denoised historical K/V states in independent
 head-specific banks. Each bank uses post-RoPE key-space density to control
