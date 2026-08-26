@@ -14,32 +14,22 @@ payloads.
 
 ## Paper Highlights
 
-### Figure 1: Long-Horizon Attention and Generation
+### Figures 1 and 3: Long-Horizon Results
 
-[![Causal-Forcing, LongLive-RAG, and DensityKV on the 120-second panda-playing-guitar case](docs/assets/video-posters/panda-causal-forcing-120s.png)](docs/assets/videos/panda-causal-forcing-120s.mp4)
+[![Causal-Forcing, LongLive-RAG, and DensityKV on the 120-second panda-playing-guitar case](docs/assets/video-posters/panda-causal-forcing-120s.png)](https://cdn.jsdelivr.net/gh/ZhaoWQQ/DensityKV@main/docs/assets/videos/panda-causal-forcing-120s.mp4)
 
 **Causal-Forcing · panda playing guitar · 120 seconds.** The three columns use
-the same prompt and seed. [Watch the full comparison video](docs/assets/videos/panda-causal-forcing-120s.mp4).
-
-### Figure 2: Method Overview
-
-![DensityKV method overview](docs/assets/method-overview.png)
-
-DensityKV retains fully denoised historical K/V states in independent
-head-specific banks. Each bank uses post-RoPE key-space density to control
-admission and eviction, while values remain paired with their original keys.
-
-### Figure 3: Qualitative Comparisons
+the same prompt and seed. [Play the full comparison video](https://cdn.jsdelivr.net/gh/ZhaoWQQ/DensityKV@main/docs/assets/videos/panda-causal-forcing-120s.mp4).
 
 <table>
   <tr>
     <td width="50%">
-      <a href="docs/assets/videos/wig-longlive-120s.mp4">
+      <a href="https://cdn.jsdelivr.net/gh/ZhaoWQQ/DensityKV@main/docs/assets/videos/wig-longlive-120s.mp4">
         <img src="docs/assets/video-posters/wig-longlive-120s.png" alt="LongLive, LongLive-RAG, and DensityKV on MovieGenBench 097" />
       </a>
     </td>
     <td width="50%">
-      <a href="docs/assets/videos/kangaroo-causal-forcing-120s.mp4">
+      <a href="https://cdn.jsdelivr.net/gh/ZhaoWQQ/DensityKV@main/docs/assets/videos/kangaroo-causal-forcing-120s.mp4">
         <img src="docs/assets/video-posters/kangaroo-causal-forcing-120s.png" alt="Causal-Forcing, LongLive-RAG, and DensityKV on MovieGenBench 012" />
       </a>
     </td>
@@ -49,10 +39,20 @@ admission and eviction, while values remain paired with their original keys.
     <td><strong>Causal-Forcing · MovieGenBench #012 · 120 seconds</strong></td>
   </tr>
   <tr>
-    <td><a href="docs/assets/videos/wig-longlive-120s.mp4">Watch the full comparison video</a></td>
-    <td><a href="docs/assets/videos/kangaroo-causal-forcing-120s.mp4">Watch the full comparison video</a></td>
+    <td><a href="https://cdn.jsdelivr.net/gh/ZhaoWQQ/DensityKV@main/docs/assets/videos/wig-longlive-120s.mp4">Play the full comparison video</a></td>
+    <td><a href="https://cdn.jsdelivr.net/gh/ZhaoWQQ/DensityKV@main/docs/assets/videos/kangaroo-causal-forcing-120s.mp4">Play the full comparison video</a></td>
   </tr>
 </table>
+
+Click any preview to open the corresponding 120-second video in the browser.
+
+### Figure 2: Method Overview
+
+![DensityKV method overview](docs/assets/method-overview.png)
+
+DensityKV retains fully denoised historical K/V states in independent
+head-specific banks. Each bank uses post-RoPE key-space density to control
+admission and eviction, while values remain paired with their original keys.
 
 ## Submission Configuration
 
