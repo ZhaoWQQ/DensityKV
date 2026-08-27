@@ -7,8 +7,7 @@ from tqdm import tqdm
 
 from utils.wan_wrapper import WanDiffusionWrapper, WanTextEncoder, WanVAEWrapper
 
-from utils.memory import gpu, get_cuda_free_memory_gb, DynamicSwapInstaller, move_model_to_device_with_memory_preservation, log_gpu_memory
-from utils.debug_option import DEBUG
+from utils.memory import gpu, get_cuda_free_memory_gb, move_model_to_device_with_memory_preservation
 import torch.distributed as dist
 
 from ae.config import AEConfig
@@ -95,9 +94,6 @@ class CausalInferencePipeline(torch.nn.Module):
     ):
         super().__init__()
         # Step 1: Initialize all models
-        if DEBUG:
-            print(f"args.model_kwargs: {args.model_kwargs}")
-        
         # Filter pipeline-specific settings out of model_kwargs so they don't reach the
         # WanDiffusionWrapper init.
         model_args_clean = dict(getattr(args, "model_kwargs", {}))
@@ -687,26 +683,6 @@ class CausalInferencePipeline(torch.nn.Module):
                 density_counts = first_attn.density_kv_bank.counts
                 density_count_min = int(density_counts.min().item())
                 density_count_max = int(density_counts.max().item())
-                density_layer_count_ranges = []
-                if bool(
-                    getattr(first_attn, "density_kv_variable_head_lengths", False)
-                ):
-                    layer_counts = torch.stack([
-                        block.self_attn.density_kv_bank.counts
-                        for block in self.generator.model.blocks
-                    ])
-                    layer_mins = layer_counts.min(dim=1).values.cpu().tolist()
-                    layer_maxs = layer_counts.max(dim=1).values.cpu().tolist()
-                    density_layer_count_ranges = [
-                        {
-                            "layer": layer_index,
-                            "min": int(min_count),
-                            "max": int(max_count),
-                        }
-                        for layer_index, (min_count, max_count) in enumerate(
-                            zip(layer_mins, layer_maxs)
-                        )
-                    ]
                 density_stats = getattr(first_attn, "density_kv_last_stats", None)
                 gate_accepted_mask = (
                     getattr(density_stats, "trace_gate_accepted", None)
@@ -752,7 +728,6 @@ class CausalInferencePipeline(torch.nn.Module):
                     "active_entries_per_head": density_count,
                     "active_entries_per_head_min": density_count_min,
                     "active_entries_per_head_max": density_count_max,
-                    "layer_active_entry_ranges": density_layer_count_ranges,
                     "processed_entries": int(
                         getattr(first_attn, "density_kv_last_processed_count", 0)
                     ),
@@ -794,9 +769,6 @@ class CausalInferencePipeline(torch.nn.Module):
                     "source_tokens_seen": int(
                         getattr(first_attn, "density_kv_source_tokens_seen", 0)
                     ),
-                    "frozen": bool(
-                        getattr(first_attn, "density_kv_frozen", False)
-                    ),
                     "attention_memory_tokens": int(
                         getattr(first_attn, "density_kv_last_memory_tokens", 0)
                     ),
@@ -805,20 +777,6 @@ class CausalInferencePipeline(torch.nn.Module):
                     ),
                     "attention_total_tokens": int(
                         getattr(first_attn, "density_kv_last_attention_tokens", 0)
-                    ),
-                    "warmup_noise_tokens": int(
-                        getattr(
-                            first_attn,
-                            "density_kv_last_warmup_noise_tokens",
-                            0,
-                        )
-                    ),
-                    "warmup_duplicate_tokens": int(
-                        getattr(
-                            first_attn,
-                            "density_kv_last_warmup_duplicate_tokens",
-                            0,
-                        )
                     ),
                 })
 

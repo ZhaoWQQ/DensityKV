@@ -1,3 +1,4 @@
-from .model import LatentAE
-from .dataset import LatentFrameDataset
 from .config import AEConfig
+from .model import LatentAE
+
+__all__ = ["AEConfig", "LatentAE"]

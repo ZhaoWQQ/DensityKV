@@ -13,7 +13,6 @@ Note: No spatial attention — this AE operates on individual frames independent
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Optional, Tuple
 
 from .config import AEConfig
 
@@ -58,7 +57,7 @@ class ResBlock(nn.Module):
 class Encoder(nn.Module):
     """Progressively downsamples [C, H, W] → GAP → embedding vector."""
 
-    def __init__(self, in_channels: int, hidden_dims: List[int],
+    def __init__(self, in_channels: int, hidden_dims: list[int],
                  latent_dim: int, spatial_h: int, spatial_w: int):
         super().__init__()
         # Build downsample + residual stack
@@ -105,67 +104,12 @@ class Encoder(nn.Module):
         return self.fc(h)
 
 
-class Decoder(nn.Module):
-    """Maps embedding (1-D) back to [C, H, W] via upsample + conv (no checkerboard)."""
-
-    def __init__(self, latent_dim: int, hidden_dims: List[int],
-                 out_channels: int, feat_shape: Tuple[int, int, int],
-                 target_h: int, target_w: int):
-        super().__init__()
-        self._feat_shape = feat_shape            # (C', H', W')
-        flat_size = 1
-        for s in feat_shape:
-            flat_size *= s
-
-        self.fc = nn.Sequential(
-            nn.Linear(latent_dim, flat_size),
-            nn.SiLU(inplace=True),
-        )
-
-        # Build upsample stack (reverse of encoder dims)
-        rev = list(reversed(hidden_dims))
-        layers: list[nn.Module] = []
-        for i in range(len(rev) - 1):
-            layers.extend([
-                nn.Upsample(scale_factor=2, mode='nearest'),
-                nn.Conv2d(rev[i], rev[i + 1], 3, padding=1),
-                nn.GroupNorm(_num_groups(rev[i + 1]), rev[i + 1]),
-                nn.SiLU(inplace=True),
-                ResBlock(rev[i + 1]),
-            ])
-        self.upsample_stack = nn.Sequential(*layers)
-
-        # Final upsample: back to original channels, no activation
-        # (latent values are unbounded, so no sigmoid/tanh)
-        self.final = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(rev[-1], out_channels, 3, padding=1),
-        )
-
-        self._target_h = target_h
-        self._target_w = target_w
-
-    def forward(self, z: torch.Tensor) -> torch.Tensor:
-        h = self.fc(z)
-        h = h.view(-1, *self._feat_shape)
-        h = self.upsample_stack(h)
-        h = self.final(h)
-        # Crop to exact target spatial size
-        h = h[:, :, :self._target_h, :self._target_w]
-        return h
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Full AE
-# ─────────────────────────────────────────────────────────────────────────────
-
 class LatentAE(nn.Module):
     """
-    AutoEncoder for video latent frames (retrieval-optimised).
+    Encoder for video latent-frame retrieval.
 
     Input:  (B*S, C, H, W)  e.g. (B*S, 16, 60, 104)
     Latent: (B*S, latent_dim)  e.g. (B*S, 1024)
-    Output: (B*S, C, H, W)  — reconstruction
     """
 
     def __init__(self, cfg: AEConfig):
@@ -178,15 +122,6 @@ class LatentAE(nn.Module):
             latent_dim=cfg.latent_dim,
             spatial_h=cfg.spatial_h,
             spatial_w=cfg.spatial_w,
-        )
-
-        self.decoder = Decoder(
-            latent_dim=cfg.latent_dim,
-            hidden_dims=cfg.hidden_dims,
-            out_channels=cfg.in_channels,
-            feat_shape=self.encoder._feat_shape,
-            target_h=cfg.spatial_h,
-            target_w=cfg.spatial_w,
         )
 
         self._init_weights()
@@ -210,18 +145,8 @@ class LatentAE(nn.Module):
                 nn.init.zeros_(m.block[-1].weight)
                 nn.init.zeros_(m.block[-1].bias)
 
-    # ── Forward ───────────────────────────────────────────────────────────────
     def forward(self, x: torch.Tensor):
-        """
-        Args:
-            x: [N, C, H, W] where N = B*S
-        Returns:
-            recon: [N, C, H, W] — reconstruction
-            embed: [N, latent_dim] — embedding vector
-        """
-        embed = self.encoder(x)
-        recon = self.decoder(embed)
-        return recon, embed
+        return self.encoder(x)
 
     # ── Encode only (for downstream retrieval) ────────────────────────────────
     @torch.no_grad()
@@ -237,37 +162,3 @@ class LatentAE(nn.Module):
         if normalize:
             embed = F.normalize(embed, dim=-1)
         return embed
-
-    # ── Loss ──────────────────────────────────────────────────────────────────
-    @staticmethod
-    def loss_function(recon: torch.Tensor, target: torch.Tensor):
-        """
-        Returns:
-            recon_loss (scalar tensor)
-        """
-        return F.mse_loss(recon.float(), target.float(), reduction='mean')
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Temporal Loss (AE Regularizer)
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TemporalDeltaLoss(nn.Module):
-    """
-    Penalizes redundancy across time by pushing visually identical consecutive
-    frames (or sink frames) to differ in embedding space, forcing the AE
-    to naturally encode the delta / motion semantics.
-    """
-    def __init__(self, margin: float = 0.85, weight: float = 1.0):
-        super().__init__()
-        self.margin = margin
-        self.weight = weight
-
-    def forward(self, v_t: torch.Tensor, v_ref: torch.Tensor) -> torch.Tensor:
-        """
-        v_t, v_ref: [batch_size, embedding_dim]
-        Hinge loss: max(0, sim - margin)
-        """
-        sim = F.cosine_similarity(v_t, v_ref, dim=-1)
-        penalty = F.relu(sim - self.margin)
-        return self.weight * penalty.mean()

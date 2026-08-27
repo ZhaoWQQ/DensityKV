@@ -17,17 +17,12 @@ from diffusers.models.modeling_utils import ModelMixin
 import torch.nn as nn
 import torch
 import math
-import torch.distributed as dist
-from utils.memory import gpu, get_cuda_free_memory_gb, DynamicSwapInstaller, log_gpu_memory
 from utils.density_kv_integration import (
-    apply_density_kv_warmup_duplicate,
     commit_staged_density_kv_bank_update,
     density_kv_logical_eviction_slice,
     density_kv_eviction_rope_indices,
     density_kv_enabled,
     get_density_kv_memory,
-    get_density_kv_warmup_noise,
-    pack_density_kv_attention_by_head,
     stage_density_kv_bank_update,
     update_density_kv_bank,
 )
@@ -41,7 +36,6 @@ from utils.infinity_rope_integration import (
     infinity_rope_enabled,
 )
 
-from utils.debug_option import DEBUG
 
 # wan 1.3B model has a weird channel / head configurations and require max-autotune to work with flexattention
 # see https://github.com/pytorch/pytorch/issues/133254
@@ -166,9 +160,7 @@ class CausalWanSelfAttention(nn.Module):
             cache_start = current_start
         use_infinity_rope = infinity_rope_enabled(self)
         use_density_kv = density_kv_enabled(self)
-        update_density_kv = use_density_kv and not bool(
-            getattr(self, "density_kv_frozen", False)
-        )
+        update_density_kv = use_density_kv
 
         # query, key, value function
         def qkv_fn(x):
@@ -548,18 +540,6 @@ class CausalWanSelfAttention(nn.Module):
                 if use_density_kv
                 else None
             )
-            warmup_noise = (
-                get_density_kv_warmup_noise(
-                    self,
-                    batch_size=b,
-                    current_start_frame=int(current_start // frame_seqlen),
-                    frame_seq_length=frame_seqlen,
-                    dtype=v.dtype,
-                    device=v.device,
-                )
-                if use_density_kv
-                else None
-            )
             if sink_tokens > 0 or self.memory_size > 0 or use_density_kv:
                 # Concatenate sink tokens and local window tokens
                 density_memory_tokens = (
@@ -590,68 +570,9 @@ class CausalWanSelfAttention(nn.Module):
                 # --- MEMORY TOKEN RETRIEVAL (using pre-computed indices) ---
                 k_mem = None
                 v_mem = None
-                density_memory_counts = None
                 
                 if density_memory is not None:
-                    k_mem, v_mem, density_memory_counts = density_memory
-                    if bool(
-                        getattr(self, "density_kv_verify_fixed_prefix", False)
-                    ):
-                        if density_memory_tokens % frame_seqlen != 0:
-                            raise AssertionError(
-                                "fixed-prefix verification requires whole memory frames"
-                            )
-                        verify_frames = density_memory_tokens // frame_seqlen
-                        cpu_k_list = kv_cache.get("cpu_k_frames", [])
-                        cpu_v_list = kv_cache.get("cpu_v_frames", [])
-                        if len(cpu_k_list) < verify_frames:
-                            raise AssertionError(
-                                "density KV became visible before fixed-prefix CPU memory"
-                            )
-                        fixed_k_unroped = torch.stack(
-                            [
-                                cpu_k_list[i][bi, 0].to(k.device)
-                                for bi in range(b)
-                                for i in range(verify_frames)
-                            ],
-                            dim=0,
-                        ).view(b, density_memory_tokens, n, d)
-                        fixed_v = torch.stack(
-                            [
-                                cpu_v_list[i][bi, 0].to(v.device)
-                                for bi in range(b)
-                                for i in range(verify_frames)
-                            ],
-                            dim=0,
-                        ).view(b, density_memory_tokens, n, d)
-                        verify_grid_sizes = grid_sizes.clone()
-                        verify_grid_sizes[:, 0] = verify_frames
-                        fixed_k = block_relativistic_rope(
-                            fixed_k_unroped,
-                            verify_grid_sizes,
-                            freqs,
-                            relative_frame_indices=torch.zeros(
-                                verify_frames,
-                                dtype=torch.long,
-                                device=k.device,
-                            ),
-                        ).type_as(v)
-                        k_max_error = float(
-                            (k_mem - fixed_k).abs().max().item()
-                        )
-                        v_max_error = float(
-                            (v_mem - fixed_v).abs().max().item()
-                        )
-                        verified_counts = self.density_kv_verified_token_counts
-                        if density_memory_tokens not in verified_counts:
-                            verified_counts.add(density_memory_tokens)
-                            print(
-                                "[density-kv-verify] "
-                                f"layer={self.density_kv_layer_index} "
-                                f"tokens={density_memory_tokens} "
-                                f"k_max_error={k_max_error:.9g} "
-                                f"v_max_error={v_max_error:.9g}"
-                            )
+                    k_mem, v_mem, _ = density_memory
                 elif self.memory_size > 0 and memory_indices is not None:
                     cpu_k_list = kv_cache.get("cpu_k_frames", [])
                     cpu_v_list = kv_cache.get("cpu_v_frames", [])
@@ -681,10 +602,6 @@ class CausalWanSelfAttention(nn.Module):
 
                 k_parts = [k_sink]
                 v_parts = [v_sink]
-
-                if warmup_noise is not None:
-                    k_parts.append(warmup_noise[0])
-                    v_parts.append(warmup_noise[1])
                 
                 if k_mem is not None:
                     k_parts.append(k_mem)
@@ -698,13 +615,6 @@ class CausalWanSelfAttention(nn.Module):
                     
                 k_cat = torch.cat(k_parts, dim=1)
                 v_cat = torch.cat(v_parts, dim=1)
-                if use_density_kv:
-                    k_cat, v_cat = apply_density_kv_warmup_duplicate(
-                        self,
-                        k_cat,
-                        v_cat,
-                        current_start_frame=int(current_start // frame_seqlen),
-                    )
                 self.last_memory_tokens = (
                     int(k_mem.shape[1]) if k_mem is not None else 0
                 )
@@ -739,11 +649,6 @@ class CausalWanSelfAttention(nn.Module):
                 if bool(
                     getattr(self, "temporal_attention_trace_enabled", False)
                 ):
-                    warmup_tokens = (
-                        int(warmup_noise[0].shape[1])
-                        if warmup_noise is not None
-                        else 0
-                    )
                     local_tokens = max(
                         0,
                         local_end_index - local_start_for_window,
@@ -753,7 +658,7 @@ class CausalWanSelfAttention(nn.Module):
                         batch_size=b,
                         key_tokens=int(k_cat.shape[1]),
                         sink_tokens=sink_tokens,
-                        warmup_tokens=warmup_tokens,
+                        warmup_tokens=0,
                         memory_tokens=(
                             int(k_mem.shape[1]) if k_mem is not None else 0
                         ),
@@ -776,57 +681,11 @@ class CausalWanSelfAttention(nn.Module):
                         clean_cache_commit=bool(clean_cache_commit),
                     )
 
-                if bool(
-                    getattr(self, "density_kv_variable_head_lengths", False)
-                ) and density_memory_counts is not None:
-                    warmup_tokens = (
-                        int(warmup_noise[0].shape[1])
-                        if warmup_noise is not None
-                        else 0
-                    )
-                    local_tokens = max(
-                        0,
-                        local_end_index - local_start_for_window,
-                    )
-                    packed_k, packed_v, packed_k_lens = (
-                        pack_density_kv_attention_by_head(
-                            k_cat,
-                            v_cat,
-                            density_memory_counts,
-                            fixed_prefix_tokens=sink_tokens + warmup_tokens,
-                            memory_tokens=density_memory_tokens,
-                            local_tokens=local_tokens,
-                        )
-                    )
-                    packed_q = (
-                        roped_query.permute(0, 2, 1, 3)
-                        .contiguous()
-                        .view(b * n, s, 1, d)
-                    )
-                    packed_q_lens = torch.full(
-                        (b * n,),
-                        s,
-                        device=packed_q.device,
-                        dtype=torch.int32,
-                    )
-                    x = attention(
-                        packed_q,
-                        packed_k,
-                        packed_v,
-                        q_lens=packed_q_lens,
-                        k_lens=packed_k_lens,
-                    )
-                    x = (
-                        x.view(b, n, s, d)
-                        .permute(0, 2, 1, 3)
-                        .contiguous()
-                    )
-                else:
-                    x = attention(
-                        roped_query,
-                        k_cat,
-                        v_cat
-                    )
+                x = attention(
+                    roped_query,
+                    k_cat,
+                    v_cat,
+                )
             else:
                 window_start = max(0, local_end_index - self.max_attention_size)
                 roped_query = (
@@ -1208,20 +1067,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
         block_mask = create_block_mask(attention_mask, B=None, H=None, Q_LEN=total_length + padded_length,
                                        KV_LEN=total_length + padded_length, _compile=False, device=device)
 
-        import torch.distributed as dist
-        if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-            pass
-
-        # import imageio
-        # import numpy as np
-        # from torch.nn.attention.flex_attention import create_mask
-
-        # mask = create_mask(attention_mask, B=None, H=None, Q_LEN=total_length +
-        #                    padded_length, KV_LEN=total_length + padded_length, device=device)
-        # import cv2
-        # mask = cv2.resize(mask[0, 0].cpu().float().numpy(), (1024, 1024))
-        # imageio.imwrite("mask_%d.jpg" % (0), np.uint8(255. * mask))
-
         return block_mask
 
     @staticmethod
@@ -1234,12 +1079,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
         [1 latent frame] [1 latent frame] ... [1 latent frame]
         We use flexattention to construct the attention mask
         """
-        # # debug
-        # DEBUG = False
-        # if DEBUG:
-        #     num_frames = 9
-        #     frame_seqlen = 256
-
         total_length = num_frames * frame_seqlen * 2
 
         # we do right padding to get to a multiple of 128
@@ -1298,17 +1137,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
         block_mask = create_block_mask(attention_mask, B=None, H=None, Q_LEN=total_length + padded_length,
                                        KV_LEN=total_length + padded_length, _compile=False, device=device)
 
-        if DEBUG:
-            import imageio
-            import numpy as np
-            from torch.nn.attention.flex_attention import create_mask
-
-            mask = create_mask(attention_mask, B=None, H=None, Q_LEN=total_length +
-                               padded_length, KV_LEN=total_length + padded_length, device=device)
-            import cv2
-            mask = cv2.resize(mask[0, 0].cpu().float().numpy(), (1024, 1024))
-            imageio.imwrite("mask_%d.jpg" % (0), np.uint8(255. * mask))
-
         return block_mask
 
     @staticmethod
@@ -1354,19 +1182,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
 
         block_mask = create_block_mask(attention_mask, B=None, H=None, Q_LEN=total_length + padded_length,
                                        KV_LEN=total_length + padded_length, _compile=False, device=device)
-
-        if not dist.is_initialized() or dist.get_rank() == 0:
-            pass
-
-        # import imageio
-        # import numpy as np
-        # from torch.nn.attention.flex_attention import create_mask
-
-        # mask = create_mask(attention_mask, B=None, H=None, Q_LEN=total_length +
-        #                    padded_length, KV_LEN=total_length + padded_length, device=device)
-        # import cv2
-        # mask = cv2.resize(mask[0, 0].cpu().float().numpy(), (1024, 1024))
-        # imageio.imwrite("mask_%d.jpg" % (0), np.uint8(255. * mask))
 
         return block_mask
 

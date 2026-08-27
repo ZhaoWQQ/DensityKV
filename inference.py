@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from omegaconf import OmegaConf
 from tqdm import tqdm
-from torchvision import transforms
 from torchvision.io import write_video
 from einops import rearrange
 import torch.distributed as dist
@@ -219,24 +218,6 @@ if density_kv_config_enabled(density_kv_cfg):
     )
     if local_rank == 0:
         capacity = int(getattr(density_kv_cfg, "capacity", 8192))
-        process_all = bool(
-            getattr(density_kv_cfg, "process_all_candidates", False)
-        )
-        update_mode = (
-            f"{str(getattr(density_kv_cfg, 'full_update_mode', 'frozen_snapshot'))}, "
-            f"all candidates in chunks of "
-            f"{int(getattr(density_kv_cfg, 'update_chunk_size', 512))}"
-            if process_all
-            else "bounded admission"
-        )
-        capacity_label = (
-            f"initial_capacity={capacity} entries/head"
-            if process_all
-            and str(
-                getattr(density_kv_cfg, "full_update_mode", "frozen_snapshot")
-            ) == "append_only_density"
-            else f"capacity={capacity} entries/head"
-        )
         local_window_frames = int(
             getattr(density_kv_cfg, "local_window_frames", -1)
         )
@@ -245,61 +226,17 @@ if density_kv_config_enabled(density_kv_cfg):
             if local_window_frames >= 0
             else "shared attention budget"
         )
-        source_token_limit = int(
-            getattr(density_kv_cfg, "source_token_limit", -1)
-        )
         logical_precommit = bool(
-            getattr(
-                density_kv_cfg,
-                "logical_precommit",
-                not bool(getattr(density_kv_cfg, "verify_fixed_prefix", False)),
-            )
-        )
-        source_policy = (
-            f"freeze after {source_token_limit} source tokens"
-            if source_token_limit >= 0
-            else "continuous updates"
-        )
-        group_count_reduce = str(
-            getattr(density_kv_cfg, "append_group_count_reduce", "min")
-        )
-        legacy_chunk_grouping = str(
-            getattr(density_kv_cfg, "legacy_chunk_grouping", "contiguous")
-        )
-        temporal_rope_mode = str(
-            getattr(density_kv_cfg, "temporal_rope_mode", "zero")
-        )
-        distance_metric = str(
-            getattr(density_kv_cfg, "distance_metric", "squared_l2")
-        )
-        query_response_rank = int(
-            getattr(density_kv_cfg, "query_response_rank", 64)
-        )
-        legacy_growth_gate = bool(
-            getattr(density_kv_cfg, "legacy_density_growth_gate", False)
+            getattr(density_kv_cfg, "logical_precommit", True)
         )
         growth_limit = float(
-            getattr(density_kv_cfg, "append_density_growth_limit", 2.0)
-        )
-        normalized_groups = int(
-            getattr(density_kv_cfg, "legacy_normalized_group_count", -1)
-        )
-        cleanup_divisor = int(
-            getattr(density_kv_cfg, "legacy_cleanup_divisor", -1)
+            getattr(density_kv_cfg, "density_growth_limit", 2.0)
         )
         print(
             f"[density-kv] attached {attached} per-layer banks; "
-            f"{capacity_label}; mode={update_mode}; "
-            f"grouping={legacy_chunk_grouping}; "
-            f"growth_gate={legacy_growth_gate}@{growth_limit:g}; "
-            f"normalized_groups={normalized_groups}; "
-            f"cleanup_divisor={cleanup_divisor}; "
-            f"temporal_rope={temporal_rope_mode}; "
-            f"distance={distance_metric}; query_rank={query_response_rank}; "
-            f"local={local_policy}; "
-            f"logical_precommit={logical_precommit}; "
-            f"source={source_policy}; "
-            f"group_count_reduce={group_count_reduce}"
+            f"capacity={capacity} entries/head; "
+            f"growth_limit={growth_limit:g}; geometry=post-RoPE K; "
+            f"local={local_policy}; logical_precommit={logical_precommit}"
         )
 
 latent_height = int(getattr(config, "latent_height", 60))
@@ -344,8 +281,6 @@ density_candidates_per_update = (
     int(config.num_frame_per_block) * spatial_tokens_per_frame
 )
 if density_kv_config_enabled(density_kv_cfg):
-    update_chunk_size = int(getattr(density_kv_cfg, "update_chunk_size", 512))
-    density_update_tail = density_candidates_per_update % update_chunk_size
     expected_candidates = int(
         getattr(density_kv_cfg, "expected_candidates_per_update", -1)
     )
@@ -354,62 +289,13 @@ if density_kv_config_enabled(density_kv_cfg):
             "density candidate count mismatch: "
             f"expected={expected_candidates}, actual={density_candidates_per_update}"
         )
-    if bool(
-        getattr(density_kv_cfg, "require_chunk_aligned_candidates", False)
-    ) and density_update_tail:
-        raise ValueError(
-            "density candidates are not chunk aligned: "
-            f"candidates={density_candidates_per_update}, "
-            f"chunk={update_chunk_size}, tail={density_update_tail}"
-        )
     if local_rank == 0:
-        repeat_tail = int(
-            getattr(density_kv_cfg, "legacy_repeat_tail_when_full", 0)
-        )
-        normalized_group_count = int(
-            getattr(density_kv_cfg, "legacy_normalized_group_count", -1)
-        )
-        cleanup_divisor = int(
-            getattr(density_kv_cfg, "legacy_cleanup_divisor", -1)
-        )
-        cleanup_alignment = int(
-            getattr(density_kv_cfg, "legacy_cleanup_alignment", 8)
-        )
-        normalized_schedule = ""
-        if normalized_group_count > 0:
-            cleanup_size = 0
-            if cleanup_divisor > 0:
-                cleanup_size = max(
-                    cleanup_alignment,
-                    int(
-                        round(
-                            density_candidates_per_update
-                            / cleanup_divisor
-                            / cleanup_alignment
-                        )
-                        * cleanup_alignment
-                    ),
-                )
-            coarse_count = density_candidates_per_update - cleanup_size
-            base_size, larger_groups = divmod(
-                coarse_count, normalized_group_count
-            )
-            normalized_sizes = [
-                base_size + (index < larger_groups)
-                for index in range(normalized_group_count)
-            ]
-            if cleanup_size:
-                normalized_sizes.append(cleanup_size)
-            normalized_schedule = f"; normalized_schedule={normalized_sizes}"
         print(
             "[spatial-shape] "
             f"latent={latent_height}x{latent_width}; "
             f"output={latent_height * 8}x{latent_width * 8}; "
             f"tokens/frame={spatial_tokens_per_frame}; "
-            f"density-candidates/update={density_candidates_per_update}; "
-            f"groups={density_candidates_per_update // update_chunk_size}; "
-            f"tail={density_update_tail}; repeat-tail-when-full={repeat_tail}"
-            f"{normalized_schedule}"
+            f"density-candidates/update={density_candidates_per_update}"
         )
 
 extended_prompt_path = config.data_path

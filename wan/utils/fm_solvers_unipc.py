@@ -11,10 +11,7 @@ from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.schedulers.scheduling_utils import (KarrasDiffusionSchedulers,
                                                    SchedulerMixin,
                                                    SchedulerOutput)
-from diffusers.utils import deprecate, is_scipy_available
-
-if is_scipy_available():
-    import scipy.stats
+from diffusers.utils import deprecate
 
 
 class FlowUniPCMultistepScheduler(SchedulerMixin, ConfigMixin):

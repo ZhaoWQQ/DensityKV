@@ -252,16 +252,10 @@ def build_temporal_key_source_frames(
         )
     )
     if source_frames.shape[-1] != key_tokens:
-        duplicate_tokens = int(
-            getattr(attn_module, "density_kv_last_warmup_duplicate_tokens", 0)
+        raise ValueError(
+            "temporal provenance does not match attention K length: "
+            f"sources={source_frames.shape[-1]}, keys={key_tokens}"
         )
-        if duplicate_tokens and key_tokens == 2 * source_frames.shape[-1]:
-            source_frames = torch.cat((source_frames, source_frames), dim=-1)
-        else:
-            raise ValueError(
-                "temporal provenance does not match attention K length: "
-                f"sources={source_frames.shape[-1]}, keys={key_tokens}"
-            )
     return source_frames
 
 

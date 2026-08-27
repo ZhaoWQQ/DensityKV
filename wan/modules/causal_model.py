@@ -17,8 +17,6 @@ from diffusers.models.modeling_utils import ModelMixin
 import torch.nn as nn
 import torch
 import math
-import torch.distributed as dist
-from utils.memory import gpu, get_cuda_free_memory_gb, DynamicSwapInstaller, log_gpu_memory
 from utils.temporal_attention_trace import (
     build_temporal_key_source_frames,
     record_temporal_attention,
@@ -36,7 +34,6 @@ from utils.deep_forcing import (
     prepare_deep_forcing_cache,
 )
 
-from utils.debug_option import DEBUG
 
 # wan 1.3B model has a weird channel / head configurations and require max-autotune to work with flexattention
 # see https://github.com/pytorch/pytorch/issues/133254
@@ -247,16 +244,6 @@ class CausalWanSelfAttention(nn.Module):
             sink_tokens = self.sink_size * frame_seqlen
             # If we are using local attention and the current KV cache size is larger than the local attention size, we need to truncate the KV cache
             kv_cache_size = kv_cache["k"].shape[1]
-            # if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-            #     print("***********before attention***********")
-            #     print(f"kv_cache_size = {kv_cache_size / frame_seqlen}")
-            #     print(f"torch.is_grad_enabled() = {torch.is_grad_enabled()}")
-            #     print(f"current_end = {current_end / frame_seqlen}")
-            #     print(f"current_start = {current_start / frame_seqlen}")
-            #     print(f"kv_cache['global_end_index'] = {kv_cache['global_end_index']}")
-            #     print(f"kv_cache['local_end_index'] = {kv_cache['local_end_index']}")
-            #     print(f"num_new_tokens = {num_new_tokens}")
-
             # Compute cache update parameters without modifying kv_cache directly
             cache_update_info = None
             is_recompute = current_end <= kv_cache["global_end_index"].item() and current_start > 0
@@ -291,12 +278,6 @@ class CausalWanSelfAttention(nn.Module):
                 # Shift existing cache content left to discard oldest tokens
                 num_evicted_tokens = num_new_tokens + kv_cache["local_end_index"].item() - kv_cache_size
                 num_rolled_tokens = kv_cache["local_end_index"].item() - num_evicted_tokens - sink_tokens
-                # if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-                #     print(f"need roll")
-                #     print(f"num_rolled_tokens: {num_rolled_tokens / frame_seqlen}")
-                #     print(f"num_evicted_tokens: {num_evicted_tokens / frame_seqlen}")
-                #     print(f"sink_tokens: {sink_tokens / frame_seqlen}")
-
                 # Compute updated local indices
                 local_end_index = kv_cache["local_end_index"].item() + current_end - \
                     kv_cache["global_end_index"].item() - num_evicted_tokens
@@ -338,8 +319,6 @@ class CausalWanSelfAttention(nn.Module):
                     "is_recompute": is_recompute
                 }
 
-                # if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-                #     print(f"used kv cache size: local_end_index - local_start_index = {local_end_index - local_start_index}")
             else:
                 # Assign new keys/values directly up to current_end
                 local_end_index = kv_cache["local_end_index"].item() + current_end - kv_cache["global_end_index"].item()
@@ -371,9 +350,6 @@ class CausalWanSelfAttention(nn.Module):
                     "is_recompute": is_recompute
                 }
 
-            # if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-            #     print(f"local_start_index: {local_start_index}, local_end_index: {local_end_index}")
-
             attention_k = temp_k[:, :local_end_index]
             query_relative_indices = None
             if use_infinity_rope:
@@ -403,8 +379,6 @@ class CausalWanSelfAttention(nn.Module):
                 local_budget = self.max_attention_size - sink_tokens
                 k_sink = attention_k[:, :sink_tokens]
                 v_sink = temp_v[:, :sink_tokens]
-                # if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-                #     print(f"local_budget: {local_budget}")
                 if local_budget > 0:
                     local_start_for_window = max(sink_tokens, local_end_index - local_budget)
                     k_local = attention_k[:, local_start_for_window:local_end_index]
@@ -842,20 +816,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
         block_mask = create_block_mask(attention_mask, B=None, H=None, Q_LEN=total_length + padded_length,
                                        KV_LEN=total_length + padded_length, _compile=False, device=device)
 
-        import torch.distributed as dist
-        if (not dist.is_initialized() or dist.get_rank() == 0) and DEBUG:
-            pass
-
-        # import imageio
-        # import numpy as np
-        # from torch.nn.attention.flex_attention import create_mask
-
-        # mask = create_mask(attention_mask, B=None, H=None, Q_LEN=total_length +
-        #                    padded_length, KV_LEN=total_length + padded_length, device=device)
-        # import cv2
-        # mask = cv2.resize(mask[0, 0].cpu().float().numpy(), (1024, 1024))
-        # imageio.imwrite("mask_%d.jpg" % (0), np.uint8(255. * mask))
-
         return block_mask
 
     @staticmethod
@@ -868,12 +828,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
         [1 latent frame] [1 latent frame] ... [1 latent frame]
         We use flexattention to construct the attention mask
         """
-        # # debug
-        # DEBUG = False
-        # if DEBUG:
-        #     num_frames = 9
-        #     frame_seqlen = 256
-
         total_length = num_frames * frame_seqlen * 2
 
         # we do right padding to get to a multiple of 128
@@ -932,17 +886,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
         block_mask = create_block_mask(attention_mask, B=None, H=None, Q_LEN=total_length + padded_length,
                                        KV_LEN=total_length + padded_length, _compile=False, device=device)
 
-        if DEBUG:
-            import imageio
-            import numpy as np
-            from torch.nn.attention.flex_attention import create_mask
-
-            mask = create_mask(attention_mask, B=None, H=None, Q_LEN=total_length +
-                               padded_length, KV_LEN=total_length + padded_length, device=device)
-            import cv2
-            mask = cv2.resize(mask[0, 0].cpu().float().numpy(), (1024, 1024))
-            imageio.imwrite("mask_%d.jpg" % (0), np.uint8(255. * mask))
-
         return block_mask
 
     @staticmethod
@@ -988,19 +931,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
 
         block_mask = create_block_mask(attention_mask, B=None, H=None, Q_LEN=total_length + padded_length,
                                        KV_LEN=total_length + padded_length, _compile=False, device=device)
-
-        if not dist.is_initialized() or dist.get_rank() == 0:
-            pass
-
-        # import imageio
-        # import numpy as np
-        # from torch.nn.attention.flex_attention import create_mask
-
-        # mask = create_mask(attention_mask, B=None, H=None, Q_LEN=total_length +
-        #                    padded_length, KV_LEN=total_length + padded_length, device=device)
-        # import cv2
-        # mask = cv2.resize(mask[0, 0].cpu().float().numpy(), (1024, 1024))
-        # imageio.imwrite("mask_%d.jpg" % (0), np.uint8(255. * mask))
 
         return block_mask
 

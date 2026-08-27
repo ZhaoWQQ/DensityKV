@@ -1,9 +1,7 @@
-from .causal_inference import CausalInferencePipeline
 from .causal_diffusion_inference import CausalDiffusionInferencePipeline
-from .self_forcing_training import SelfForcingTrainingPipeline
+from .causal_inference import CausalInferencePipeline
 
 __all__ = [
     "CausalDiffusionInferencePipeline",
     "CausalInferencePipeline",
-    "SelfForcingTrainingPipeline",
 ]

@@ -9,12 +9,8 @@ def test_final_b3_policy_uses_a_synchronized_head_prefix() -> None:
     config = DensityKVBankConfig(
         max_entries=4,
         density_scale=1.0,
-        process_all_candidates=True,
-        update_chunk_size=2,
-        full_update_mode="legacy_chunk_batch",
-        legacy_density_gated_bootstrap_v2=True,
-        legacy_bootstrap_v2_gate="all_anchor_growth_ratio",
-        legacy_bootstrap_density_limit=2.0,
+        density_growth_limit=2.0,
+        work_chunk_size=2,
         compute_dtype="float32",
         fast_impl="torch",
     )
