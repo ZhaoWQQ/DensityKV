@@ -16,18 +16,9 @@ payloads.
 
 ### Long-Horizon Video Comparisons
 
-**Causal-Forcing · panda playing guitar · 120 seconds.** The three columns use
-the same prompt and seed.
-
 https://github.com/user-attachments/assets/e31458c5-314e-4faf-9581-357bc9b8a83a
 
-**LongLive · MovieGenBench #097 · 120 seconds.** Long-term character appearance
-and street-scene structure.
-
 https://github.com/user-attachments/assets/876697b4-f79e-4ed8-bb97-a20d5f308e6f
-
-**Causal-Forcing · MovieGenBench #012 · 120 seconds.** Subject identity under
-sustained, highly dynamic motion.
 
 https://github.com/user-attachments/assets/7e785ff4-e0d8-4fb8-bc24-b3438c7b38c2
 
