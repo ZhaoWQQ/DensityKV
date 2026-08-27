@@ -12,26 +12,26 @@ token-specific key/value states, then keeps a bounded coreset in each attention
 key space. Keys determine admission and eviction; values remain exact paired
 payloads.
 
-## Paper Highlights
+## Results
 
-### Figures 1 and 3: Long-Horizon Results
+### Long-Horizon Video Comparisons
 
 **Causal-Forcing · panda playing guitar · 120 seconds.** The three columns use
 the same prompt and seed.
 
-https://github.com/user-attachments/assets/895cf07b-7248-48ae-be56-375e12c81e6b
+https://github.com/user-attachments/assets/e31458c5-314e-4faf-9581-357bc9b8a83a
 
 **LongLive · MovieGenBench #097 · 120 seconds.** Long-term character appearance
 and street-scene structure.
 
-https://github.com/user-attachments/assets/dcdcd437-8fb3-4bc1-94c9-cfff99de4284
+https://github.com/user-attachments/assets/876697b4-f79e-4ed8-bb97-a20d5f308e6f
 
 **Causal-Forcing · MovieGenBench #012 · 120 seconds.** Subject identity under
 sustained, highly dynamic motion.
 
-https://github.com/user-attachments/assets/c4b181a0-a00a-42df-8ad3-21b66519343c
+https://github.com/user-attachments/assets/7e785ff4-e0d8-4fb8-bc24-b3438c7b38c2
 
-### Figure 2: Method Overview
+### Method Overview
 
 ![DensityKV method overview](docs/assets/method-overview-cropped.png)
 
@@ -88,7 +88,7 @@ checkpoints/
 └── ae_latent_mem.pt        # only needed for the RAG comparison
 ```
 
-## Paper Cases
+## Example Cases
 
 The code release keeps the four qualitative entry points used by the paper.
 Each launcher runs a matched `base`, `rag`, and `densitykv` comparison unless
@@ -96,19 +96,19 @@ Each launcher runs a matched `base`, `rag`, and `densitykv` comparison unless
 
 | Case | Backbone | Length | Seed |
 |---|---|---:|---:|
-| Figure 1 panda playing guitar | Causal-Forcing | 120 s | 13 |
-| Figure 3 kangaroo disco dance | Causal-Forcing | 120 s | 0 |
-| Figure 5 rabbit reading a newspaper | Causal-Forcing | 60 s | 0 |
+| Panda playing guitar | Causal-Forcing | 120 s | 13 |
+| Kangaroo disco dance | Causal-Forcing | 120 s | 0 |
+| Rabbit reading a newspaper | Causal-Forcing | 60 s | 0 |
 | Wig and sunglasses transformation | LongLive | 120 s | 0 |
 
 ```bash
-# Figure 1: panda playing guitar, Causal-Forcing, 120 s
+# Panda playing guitar, Causal-Forcing, 120 s
 GPU=0 bash scripts/run_figure1_panda.sh
 
-# Figure 3: kangaroo disco dance, Causal-Forcing, 120 s
+# Kangaroo disco dance, Causal-Forcing, 120 s
 GPU=0 bash scripts/run_figure3_kangaroo.sh
 
-# Figure 5: rabbit reading a newspaper, Causal-Forcing, 60 s
+# Rabbit reading a newspaper, Causal-Forcing, 60 s
 GPU=0 bash scripts/run_figure5_rabbit.sh
 
 # Wig-and-sunglasses transformation, LongLive, 120 s
@@ -125,7 +125,7 @@ python scripts/run_paper_case.py --case figure1_panda --dry-run
 python scripts/run_paper_case.py \
   --case sunglasses_man --methods densitykv --gpu 0
 
-# Record the all-layer temporal-attention sidecar used by Figure 1.
+# Record the all-layer temporal-attention sidecar used by the panda comparison.
 python scripts/run_paper_case.py \
   --case figure1_panda --methods base densitykv \
   --attention-trace --gpu 0
