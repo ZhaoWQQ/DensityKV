@@ -3,8 +3,7 @@
 Official implementation of **DensityKV: Density-Guided KV Cache Compression
 for Long Video Generation**.
 
-[Project page](https://zhaowqq.github.io/DensityKV/) ·
-[Paper PDF](docs/assets/densitykv-paper.pdf)
+[![Tests](https://github.com/ZhaoWQQ/DensityKV/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhaoWQQ/DensityKV/actions/workflows/ci.yml)
 
 DensityKV is a training-free historical memory for autoregressive video
 diffusion. It decomposes clean generated frames into layer-, head-, and
@@ -149,13 +148,6 @@ scripts/                        Four retained paper-case launchers
 tests/                          Lightweight contract tests
 docs/                           Static project page
 ```
-
-## Project Page
-
-The static project page lives in `docs/` and is deployed through GitHub Pages.
-It can also be opened locally from [docs/index.html](docs/index.html). Three
-matched 120-second comparison videos are retained as the public qualitative
-showcase; unrelated generated outputs remain outside the source repository.
 
 ## Acknowledgements
 
