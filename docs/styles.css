@@ -80,8 +80,8 @@ button { font: inherit; }
 }
 .mobile-nav a { display: block; padding: 10px 0; color: var(--muted); border-bottom: 1px solid var(--line); }
 
-.hero { padding-top: 70px; padding-bottom: 72px; text-align: center; }
-.venue, .kicker {
+.hero { padding-top: 24px; padding-bottom: 26px; text-align: center; }
+.kicker {
   margin: 0 0 10px;
   color: var(--accent);
   font-family: "DM Mono", monospace;
@@ -93,14 +93,14 @@ button { font: inherit; }
   margin: 0;
   color: #121916;
   font-family: "Source Serif 4", Georgia, serif;
-  font-size: clamp(54px, 8vw, 92px);
+  font-size: clamp(50px, 6.5vw, 72px);
   line-height: 1;
 }
 .hero-subtitle {
   max-width: 940px;
   margin: 16px auto 0;
   font-family: "Source Serif 4", Georgia, serif;
-  font-size: clamp(23px, 3vw, 38px);
+  font-size: clamp(22px, 2.8vw, 31px);
   font-weight: 600;
   line-height: 1.18;
 }
@@ -110,13 +110,13 @@ button { font: inherit; }
   flex-wrap: wrap;
   justify-content: center;
   gap: 4px 18px;
-  margin: 26px auto 0;
+  margin: 15px auto 0;
   color: #37413d;
   font-size: 14px;
 }
 .authors sup, .affiliations sup { color: var(--accent); font-size: 9px; }
 .affiliations { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
-.hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 25px; }
+.hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 14px; }
 .button {
   min-height: 42px;
   display: inline-flex;
@@ -137,7 +137,7 @@ button { font: inherit; }
 .button svg { width: 17px; height: 17px; }
 .tldr {
   max-width: 850px;
-  margin: 34px auto 26px;
+  margin: 18px auto 14px;
   color: #3f4b46;
   font-family: "Source Serif 4", Georgia, serif;
   font-size: 18px;
@@ -145,10 +145,10 @@ button { font: inherit; }
 
 .teaser-video, .method-figure, .result-video { margin: 0; }
 .teaser-video video, .result-video video {
-  aspect-ratio: 1248 / 292;
+  aspect-ratio: 1248 / 256;
   object-fit: contain;
-  background: #0e1720;
-  border: 1px solid #17222b;
+  background: #fff;
+  border: 1px solid var(--line);
 }
 figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; text-align: left; }
 
@@ -171,6 +171,8 @@ figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; text-align:
 .section-heading { max-width: 800px; margin-bottom: 42px; }
 .section-heading > p:last-child, .code-grid > div > p, .citation-grid > div > p { margin: 16px 0 0; color: var(--muted); }
 
+.method-figure-scroll { overflow-x: auto; overscroll-behavior-inline: contain; }
+.method-figure-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .method-figure img { background: #fff; border: 1px solid var(--line); }
 .method-points {
   display: grid;
@@ -245,7 +247,7 @@ figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; text-align:
   .desktop-nav { display: none; }
   .menu-button { display: grid; }
   .mobile-nav.is-open { display: block; }
-  .hero { padding-top: 52px; padding-bottom: 54px; }
+  .hero { padding-top: 28px; padding-bottom: 34px; }
   .authors { gap: 3px 12px; font-size: 12px; }
   .affiliations { line-height: 1.8; }
   .tldr { font-size: 16px; }
@@ -263,6 +265,7 @@ figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; text-align:
   .hero-subtitle { font-size: 24px; }
   .hero-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
   .button { min-width: 0; padding-inline: 10px; }
+  .method-figure img { width: 760px; max-width: none; }
   .teaser-video, .result-video {
     width: calc(100vw - 16px);
     margin-left: calc((100% - 100vw + 16px) / 2);

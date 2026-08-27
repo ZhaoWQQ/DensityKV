@@ -11,7 +11,9 @@
     <meta property="og:title" content="DensityKV" />
     <meta property="og:description" content="Density-Guided KV Cache Compression for Long Video Generation" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="assets/panda-densitykv-60s.png" />
+    <meta property="og:url" content="https://zhaowqq.github.io/DensityKV/" />
+    <meta property="og:image" content="https://zhaowqq.github.io/DensityKV/assets/panda-densitykv-60s.png" />
+    <link rel="canonical" href="https://zhaowqq.github.io/DensityKV/" />
     <title>DensityKV | Long Video Generation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,7 +21,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=5" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -31,6 +33,7 @@
           <a href="#abstract">Abstract</a>
           <a href="#method">Method</a>
           <a href="#results">Results</a>
+          <a href="#code">Code</a>
           <a href="#citation">Citation</a>
         </nav>
         <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-button>
@@ -43,12 +46,12 @@
       <a href="#abstract">Abstract</a>
       <a href="#method">Method</a>
       <a href="#results">Results</a>
+      <a href="#code">Code</a>
       <a href="#citation">Citation</a>
     </nav>
 
     <main id="main">
       <section class="hero shell" id="top" aria-labelledby="hero-title">
-        <p class="venue">Project page</p>
         <h1 id="hero-title">DensityKV</h1>
         <p class="hero-subtitle">Density-Guided KV Cache Compression for Long Video Generation</p>
 
@@ -98,9 +101,6 @@
             <source src="assets/videos/panda-causal-forcing-120s.mp4" type="video/mp4" />
             Your browser does not support HTML video.
           </video>
-          <figcaption>
-            A matched 120-second rollout. All three columns share the same Causal-Forcing prompt and seed.
-          </figcaption>
         </figure>
       </section>
 
@@ -139,11 +139,13 @@
           </div>
 
           <figure class="method-figure">
-            <img
-              src="assets/method-overview-cropped.png"
-              alt="Overview of DensityKV's per-head historical KV bank update and attention cycle"
-              loading="lazy"
-            />
+            <div class="method-figure-scroll" tabindex="0" aria-label="Scrollable DensityKV method diagram">
+              <img
+                src="assets/method-overview-cropped.png"
+                alt="Overview of DensityKV's per-head historical KV bank update and attention cycle"
+                loading="lazy"
+              />
+            </div>
             <figcaption>
               Current queries attend retained history; clean generated K/V candidates then update each
               head-specific bank according to local key-space saturation.
@@ -186,18 +188,12 @@
               <video controls muted loop playsinline preload="metadata" aria-label="LongLive character comparison">
                 <source src="assets/videos/wig-longlive-120s.mp4" type="video/mp4" />
               </video>
-              <figcaption>
-                <strong>LongLive · MovieGenBench #097.</strong> Long-term character appearance and street-scene structure.
-              </figcaption>
             </figure>
 
             <figure class="result-video">
               <video controls muted loop playsinline preload="metadata" aria-label="Causal-Forcing kangaroo comparison">
                 <source src="assets/videos/kangaroo-causal-forcing-120s.mp4" type="video/mp4" />
               </video>
-              <figcaption>
-                <strong>Causal-Forcing · MovieGenBench #012.</strong> Subject identity under sustained, highly dynamic motion.
-              </figcaption>
             </figure>
           </div>
 
