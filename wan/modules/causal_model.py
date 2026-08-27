@@ -1130,7 +1130,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
                 return module(*inputs, **kwargs)
             return custom_forward
 
-        cache_update_info = None
         cache_update_infos = []  # Collect cache update info for all blocks
         for block_index, block in enumerate(self.blocks):
             # print(f"block_index: {block_index}")
@@ -1152,8 +1151,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
                 if kv_cache is not None and isinstance(result, tuple):
                     x, block_cache_update_info = result
                     cache_update_infos.append((block_index, block_cache_update_info))
-                    # Extract base info for subsequent blocks (without concrete cache update details)
-                    cache_update_info = block_cache_update_info[:2]  # (current_end, local_end_index)
                 else:
                     x = result
             else:
@@ -1171,8 +1168,6 @@ class CausalWanModel(ModelMixin, ConfigMixin):
                 if kv_cache is not None and isinstance(result, tuple):
                     x, block_cache_update_info = result
                     cache_update_infos.append((block_index, block_cache_update_info))
-                    # Extract base info for subsequent blocks (without concrete cache update details)
-                    cache_update_info = block_cache_update_info[:2]  # (current_end, local_end_index)
                 else:
                     x = result
         # log_gpu_memory(f"in _forward_inference: {x[0].device}")

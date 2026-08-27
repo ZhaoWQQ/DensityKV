@@ -401,7 +401,7 @@ class CausalInferencePipeline(torch.nn.Module):
 
         # Step 2: Temporal denoising loop
         all_num_frames = [self.num_frame_per_block] * num_blocks
-        pbar_blocks = tqdm(all_num_frames, desc=f"Generating blocks", disable=(dist.is_initialized() and dist.get_rank() != 0))
+        pbar_blocks = tqdm(all_num_frames, desc="Generating blocks", disable=(dist.is_initialized() and dist.get_rank() != 0))
         for block_index, current_num_frames in enumerate(pbar_blocks):
             if (
                 schedule_index + 1 < len(conditional_schedule)
@@ -822,7 +822,7 @@ class CausalInferencePipeline(torch.nn.Module):
                 print(f"  - Diffusion generation time: {diffusion_time:.2f} ms ({100 * diffusion_time / total_time:.2f}%)")
                 for i, block_time in enumerate(block_times):
                     print(f"    - Block {i} generation time: {block_time:.2f} ms ({100 * block_time / diffusion_time:.2f}% of diffusion)")
-                print(f"  - VAE decoding skipped")
+                print("  - VAE decoding skipped")
                 print(f"  - Total time: {total_time:.2f} ms")
         else:
             assert output is not None
@@ -899,28 +899,18 @@ class CausalInferencePipeline(torch.nn.Module):
         """
         if local_attn_size_value == -1:
             target_size = 32760
-            policy = "global"
         else:
             target_size = int(local_attn_size_value) * self.frame_seq_length
-            policy = "local"
 
         updated_modules = []
         # Update root model if applicable
         if hasattr(self.generator.model, "max_attention_size"):
-            try:
-                prev = getattr(self.generator.model, "max_attention_size")
-            except Exception:
-                prev = None
             setattr(self.generator.model, "max_attention_size", target_size)
             updated_modules.append("<root_model>")
 
         # Update all child modules
         for name, module in self.generator.model.named_modules():
             if hasattr(module, "max_attention_size"):
-                try:
-                    prev = getattr(module, "max_attention_size")
-                except Exception:
-                    prev = None
                 try:
                     setattr(module, "max_attention_size", target_size)
                     updated_modules.append(name if name else module.__class__.__name__)

@@ -1,9 +1,8 @@
 # Reproducible qualitative cases retained for the AAAI submission.
 #
 # The launcher merges common -> backbone -> method -> case. DensityKV uses the
-# final paper-video setting: B3, max-normalized ordering, one synchronized
-# admission count across heads, post-RoPE K geometry, M=9360, and a five-frame
-# local window.
+# final paper-video setting: max-normalized ordering, one synchronized admission
+# count across heads, post-RoPE K geometry, M=9360, and a five-frame local window.
 
 common:
   denoising_step_list: [1000, 750, 500, 250]

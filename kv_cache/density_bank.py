@@ -7,6 +7,7 @@ move with their paired keys.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import warnings
 
 import torch
 import torch.nn as nn
@@ -112,6 +113,7 @@ class DensityLimitedKVBank(nn.Module):
         self.groups = int(groups)
         self.key_dim = int(key_dim)
         self.value_dim = int(value_dim)
+        self._auto_triton_failed = False
         storage_dtype = {
             "bfloat16": torch.bfloat16,
             "float16": torch.float16,
@@ -192,16 +194,33 @@ class DensityLimitedKVBank(nn.Module):
         *,
         exclude_diagonal: bool = False,
     ) -> torch.Tensor:
-        if self.config.fast_impl in {"auto", "triton"} and triton_density_sum:
-            result = triton_density_sum(
-                squared_distance,
-                density_scale=self.config.density_scale,
-                riesz_power=self.config.riesz_power,
-                riesz_eps=self.config.riesz_eps,
-                exclude_diagonal=exclude_diagonal,
-            )
-            if result is not None:
-                return result
+        use_triton = (
+            self.config.fast_impl in {"auto", "triton"}
+            and triton_density_sum is not None
+            and not self._auto_triton_failed
+        )
+        if use_triton:
+            try:
+                result = triton_density_sum(
+                    squared_distance,
+                    density_scale=self.config.density_scale,
+                    riesz_power=self.config.riesz_power,
+                    riesz_eps=self.config.riesz_eps,
+                    exclude_diagonal=exclude_diagonal,
+                )
+            except Exception as error:
+                if self.config.fast_impl == "triton":
+                    raise
+                self._auto_triton_failed = True
+                warnings.warn(
+                    "Triton density reduction failed; falling back to PyTorch "
+                    f"for this bank ({type(error).__name__}: {error}).",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            else:
+                if result is not None:
+                    return result
         if self.config.fast_impl == "triton" and triton_density_sum is None:
             raise RuntimeError("Triton density reduction is unavailable")
         contribution = self._density_contribution(squared_distance)

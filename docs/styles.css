@@ -263,7 +263,10 @@ figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; text-align:
   .hero-subtitle { font-size: 24px; }
   .hero-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
   .button { min-width: 0; padding-inline: 10px; }
-  .teaser-video, .result-video { width: calc(100vw - 16px); margin-left: calc((100vw - var(--shell)) / -2 + 8px); }
+  .teaser-video, .result-video {
+    width: calc(100vw - 16px);
+    margin-left: calc((100% - 100vw + 16px) / 2);
+  }
   .method-points, .result-facts { grid-template-columns: 1fr; }
   .method-points article, .method-points article:nth-child(2), .method-points article:last-child,
   .result-facts div, .result-facts div:nth-child(2), .result-facts div:last-child {

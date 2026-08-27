@@ -43,7 +43,7 @@ All retained paper examples use the same final DensityKV policy:
 | Geometry | post-RoPE keys; zero temporal coordinate and native spatial coordinates |
 | Distance | squared Euclidean |
 | Soft-Riesz kernel | `eps=1`, `p=2`, `sigma=sqrt(d_k/2)=8` |
-| Admission | B3 insertion-density growth, threshold `2.0` |
+| Admission | Insertion-relative density growth, threshold `2.0` |
 | Candidate order | maximum normalized influence |
 | Head policy | one synchronized admission count across heads |
 | Eviction | mandatory violations, then densest retained keys |

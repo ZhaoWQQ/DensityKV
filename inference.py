@@ -2,27 +2,42 @@
 # SPDX-License-Identifier: Apache-2.0
 import argparse
 import json
-import torch
 import os
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import peft
+import torch
+import torch.distributed as dist
+from einops import rearrange
 from omegaconf import OmegaConf
 from tqdm import tqdm
 from torchvision.io import write_video
-from einops import rearrange
-import torch.distributed as dist
 from torch.utils.data import DataLoader, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
-import matplotlib.pyplot as plt
 
 from pipeline import (
     CausalDiffusionInferencePipeline,
     CausalInferencePipeline,
 )
 from utils.dataset import TextDataset
+from utils.density_kv_integration import (
+    attach_density_kv_banks,
+    density_kv_config_enabled,
+    export_density_kv_lineage,
+)
+from utils.lora_utils import (
+    configure_lora_for_model,
+    merge_lora_into_base_model,
+)
+from utils.memory import DynamicSwapInstaller, get_cuda_free_memory_gb
 from utils.misc import set_seed
-
-from utils.memory import get_cuda_free_memory_gb, DynamicSwapInstaller
 from utils.streaming_rollout import LatentShardWriter, decode_shards_to_mp4
+from utils.temporal_attention_trace import (
+    attach_temporal_attention_trace,
+    export_temporal_attention_trace,
+    temporal_attention_trace_config_enabled,
+)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config_path", type=str, help="Path to the config file")
@@ -124,24 +139,6 @@ if config.generator_ckpt:
                     )
     else:
         pipeline.generator.load_state_dict(raw_gen_state_dict)
-
-# --------------------------- LoRA support (optional) ---------------------------
-from utils.lora_utils import (
-    configure_lora_for_model,
-    merge_lora_into_base_model,
-)
-import peft
-from utils.density_kv_integration import (
-    attach_density_kv_banks,
-    density_kv_config_enabled,
-    export_density_kv_lineage,
-)
-from utils.temporal_attention_trace import (
-    attach_temporal_attention_trace,
-    export_temporal_attention_trace,
-    temporal_attention_trace_config_enabled,
-)
-
 
 def _patch_peft_tensor_parallel_compat():
     """Skip PEFT TP sharding on environments without the optional TP classes."""
