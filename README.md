@@ -66,7 +66,18 @@ pip install -r requirements.txt
 pip install flash-attn --no-build-isolation
 ```
 
-Download the Wan base model and place the released AR checkpoints as follows:
+Download the [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B)
+base model and the released
+[LongLive-RAG assets](https://huggingface.co/qixinhu11/LongLive-RAG):
+
+```bash
+hf download Wan-AI/Wan2.1-T2V-1.3B \
+  --local-dir wan_models/Wan2.1-T2V-1.3B
+hf download qixinhu11/LongLive-RAG \
+  --local-dir . --include "checkpoints/*"
+```
+
+This produces the following layout:
 
 ```text
 wan_models/Wan2.1-T2V-1.3B/
