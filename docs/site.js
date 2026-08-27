@@ -15,17 +15,37 @@ mobileNav?.querySelectorAll("a").forEach((link) => {
   });
 });
 
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !mobileNav?.classList.contains("is-open")) return;
+  mobileNav.classList.remove("is-open");
+  menuButton?.setAttribute("aria-expanded", "false");
+  menuButton?.setAttribute("aria-label", "Open navigation");
+  menuButton?.focus();
+});
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth <= 820 || !mobileNav?.classList.contains("is-open")) return;
+  mobileNav.classList.remove("is-open");
+  menuButton?.setAttribute("aria-expanded", "false");
+  menuButton?.setAttribute("aria-label", "Open navigation");
+});
+
 const copyText = async (button, selector, copiedLabel, fallbackLabel) => {
   const value = document.querySelector(selector)?.textContent?.trim();
   if (!value) return;
 
   try {
     await navigator.clipboard.writeText(value);
+    const icon = button.querySelector("svg");
     button.title = copiedLabel;
     button.setAttribute("aria-label", copiedLabel);
+    icon?.setAttribute("data-lucide", "check");
+    window.lucide?.createIcons({ "stroke-width": 1.8 });
     window.setTimeout(() => {
       button.title = fallbackLabel;
       button.setAttribute("aria-label", fallbackLabel);
+      button.querySelector("svg")?.setAttribute("data-lucide", "copy");
+      window.lucide?.createIcons({ "stroke-width": 1.8 });
     }, 1800);
   } catch {
     button.title = "Select the text to copy";

@@ -8,12 +8,19 @@
       content="DensityKV is a training-free historical KV bank management strategy for consistent long-horizon video generation."
     />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light" />
     <meta property="og:title" content="DensityKV" />
     <meta property="og:description" content="Density-Guided KV Cache Compression for Long Video Generation" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DensityKV" />
     <meta property="og:url" content="https://zhaowqq.github.io/DensityKV/" />
     <meta property="og:image" content="https://zhaowqq.github.io/DensityKV/assets/panda-densitykv-60s.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="DensityKV" />
+    <meta name="twitter:description" content="Density-Guided KV Cache Compression for Long Video Generation" />
+    <meta name="twitter:image" content="https://zhaowqq.github.io/DensityKV/assets/panda-densitykv-60s.png" />
     <link rel="canonical" href="https://zhaowqq.github.io/DensityKV/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <title>DensityKV | Long Video Generation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -21,7 +28,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -96,6 +103,8 @@
             loop
             playsinline
             preload="metadata"
+            width="1248"
+            height="256"
             aria-label="120-second panda comparison across Causal-Forcing, LongLive-RAG, and DensityKV"
           >
             <source src="assets/videos/panda-causal-forcing-120s.mp4" type="video/mp4" />
@@ -144,6 +153,9 @@
                 src="assets/method-overview-cropped.png"
                 alt="Overview of DensityKV's per-head historical KV bank update and attention cycle"
                 loading="lazy"
+                decoding="async"
+                width="2129"
+                height="934"
               />
             </div>
             <figcaption>
@@ -185,13 +197,31 @@
 
           <div class="video-gallery">
             <figure class="result-video">
-              <video controls muted loop playsinline preload="metadata" aria-label="LongLive character comparison">
+              <video
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                width="1248"
+                height="256"
+                aria-label="LongLive character comparison"
+              >
                 <source src="assets/videos/wig-longlive-120s.mp4" type="video/mp4" />
               </video>
             </figure>
 
             <figure class="result-video">
-              <video controls muted loop playsinline preload="metadata" aria-label="Causal-Forcing kangaroo comparison">
+              <video
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                width="1248"
+                height="256"
+                aria-label="Causal-Forcing kangaroo comparison"
+              >
                 <source src="assets/videos/kangaroo-causal-forcing-120s.mp4" type="video/mp4" />
               </video>
             </figure>
@@ -254,12 +284,19 @@
 
     <footer class="site-footer">
       <div class="shell footer-row">
-        <span>DensityKV</span>
-        <span>Manifold AI · Tsinghua University</span>
+        <div>
+          <span class="footer-wordmark">DensityKV</span>
+          <span>Manifold AI · Tsinghua University</span>
+        </div>
+        <nav aria-label="Footer navigation">
+          <a href="assets/densitykv-paper.pdf">Paper</a>
+          <a href="https://github.com/ZhaoWQQ/DensityKV">Code</a>
+          <a href="#top">Back to top</a>
+        </nav>
       </div>
     </footer>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="site.js"></script>
+    <script src="site.js?v=2"></script>
   </body>
 </html>
