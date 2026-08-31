@@ -3,7 +3,7 @@
 Official implementation of **DensityKV: Density-Guided KV Cache Compression
 for Long Video Generation**.
 
-[Paper](https://arxiv.org/abs/2608.27922) ·
+[Paper](https://arxiv.org/pdf/2608.27922) ·
 [Project Page](https://zhaowqq.github.io/DensityKV/)
 
 [![Tests](https://github.com/ZhaoWQQ/DensityKV/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhaoWQQ/DensityKV/actions/workflows/ci.yml)
