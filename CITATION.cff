@@ -22,4 +22,29 @@ authors:
   - family-names: Wu
     given-names: Wei
 repository-code: "https://github.com/ZhaoWQQ/DensityKV"
+url: "https://arxiv.org/abs/2608.27922"
 license: Apache-2.0
+preferred-citation:
+  type: article
+  title: "DensityKV: Density-Guided KV Cache Compression for Long Video Generation"
+  authors:
+    - family-names: Zhao
+      given-names: Wenqu
+    - family-names: Chi
+      given-names: Xuemin
+    - family-names: Zhang
+      given-names: Xin
+    - family-names: Ma
+      given-names: Guoqing
+    - family-names: Li
+      given-names: Baorun
+    - family-names: Fang
+      given-names: Jianjie
+    - family-names: Tang
+      given-names: Peizhi
+    - family-names: Gao
+      given-names: Chen
+    - family-names: Wu
+      given-names: Wei
+  year: 2026
+  url: "https://arxiv.org/abs/2608.27922"

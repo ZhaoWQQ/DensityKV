@@ -134,13 +134,6 @@ button { font: inherit; }
 .button:hover { border-color: var(--accent); }
 .button-primary { color: #fff; background: var(--accent); border-color: var(--accent); }
 .button-primary:hover { background: var(--accent-dark); }
-.button-disabled {
-  color: #7b817e;
-  background: #eef0ef;
-  border-color: #d5d9d7;
-  cursor: not-allowed;
-}
-.button-disabled:hover { border-color: #d5d9d7; }
 .button svg { width: 17px; height: 17px; }
 .tldr {
   max-width: 850px;
